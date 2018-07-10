@@ -212,7 +212,7 @@ export default class MultiSlider extends React.Component {
 
     const unconfined = I18nManager.isRTL ? this.state.pastOne - accumDistance : accumDistance + this.state.pastOne;
     var bottom = 0;
-    var trueTop = this.state.positionTwo - (this.props.allowOverlap ? 0 : 5);
+    var trueTop = this.state.positionTwo - (this.props.allowOverlap ? 0 : (this.stepLength * 5));
     var top = trueTop === 0 ? 0 : trueTop || this.props.sliderLength;
     var confined = unconfined < bottom
       ? bottom
@@ -260,7 +260,7 @@ export default class MultiSlider extends React.Component {
     const accumDistanceDisplacement = this.props.vertical ? gestureState.dx : gestureState.dy;
 
     const unconfined = I18nManager.isRTL ? this.state.pastTwo - accumDistance : accumDistance + this.state.pastTwo;
-    var bottom = this.state.positionOne + (this.props.allowOverlap ? 0 : 5);
+    var bottom = this.state.positionOne + (this.props.allowOverlap ? 0 : (this.stepLength * 5));
     var top = this.props.sliderLength;
     var confined = unconfined < bottom
       ? bottom
