@@ -75,8 +75,7 @@ class Example extends React.Component {
             min={0}
             max={10}
             step={1}
-            allowOverlap
-            snapped
+            minSeperation={8}
           />
         </View>
         <Text style={styles.text}>Native RCT Slider</Text>
