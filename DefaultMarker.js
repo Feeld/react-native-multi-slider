@@ -4,7 +4,11 @@ import { View, StyleSheet, Platform, TouchableHighlight } from 'react-native';
 class DefaultMarker extends React.Component {
   render() {
     return (
-      <TouchableHighlight>
+      <TouchableHighlight
+        accesssible
+        accessibilityLabel={this.props.accessibilityLabel}
+        accessibilityHint={this.props.accessibilityHint}
+      >
         <View
           style={
             this.props.enabled

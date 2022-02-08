@@ -22,6 +22,8 @@ export interface MarkerProps {
     currentValue: number;
     valuePrefix: string;
     valueSuffix: string;
+    accessibilityLabel?: string;
+    accessibilityHint?: string;
 }
 
 export interface LabelProps {
@@ -75,6 +77,7 @@ export interface MultiSliderProps {
     stepStyle?: ViewStyle;
     stepLabelStyle?: ViewStyle;
     stepMarkerStyle?: ViewStyle;
+    selectedStepMarkerStyle?: ViewStyle;
     valuePrefix?: string;
     valueSuffix?: string;
     showSteps?: boolean;
@@ -94,6 +97,10 @@ export interface MultiSliderProps {
     imageBackgroundSource?: string;
     enableLabel?: boolean;
     vertical?: boolean;
+    startMarkerA11yLabel?: string;
+    startMarkerA11yHint?: string;
+    endMarkerA11yLabel?: string;
+    endMarkerA11yHint?: string;
 }
 
 export default class MultiSlider extends React.Component<MultiSliderProps> {}
