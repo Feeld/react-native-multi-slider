@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   labelContainer: {
     position: 'absolute',
     flexGrow: 1,
-    transform: [{ translateY: -25 }],
+    transform: [{ translateY: -23 }],
   },
   topMarkerContainer: {
     zIndex: 1,
