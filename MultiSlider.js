@@ -482,13 +482,13 @@ export default class MultiSlider extends React.Component {
       var step = this.stepsAs[index];
 
       const animatedOpacity = this.state.animation.interpolate({
-        inputRange: [Math.max(index - 1, 0) * stepLength, index * stepLength],
+        inputRange: [Math.max(index - 1, -1) * stepLength, index * stepLength],
         outputRange: [0, 1],
         extrapolate: 'clamp',
       });
 
       return (
-        <Pressable
+        <Pressable accessibilityRole="button"
           key={number}
           onPress={() => {
             this.setState({ valueOne: number });
@@ -503,31 +503,29 @@ export default class MultiSlider extends React.Component {
             },
           ]}
         >
-          {this.props.showStepMarkers &&
-            index !== 0 &&
-            index !== this.optionsArray.length - 1 && (
-              <View
+          {this.props.showStepMarkers && (
+            <View
+              style={[
+                markerStyles,
+                { // Magic values to center the step marker in its press container
+                  transform: [{ translateX: 8 }, { translateY: 7 }],
+                },
+              ]}
+            >
+              {/* Clone of the step marker, but with 'selected' style applied. It's better to render the component twice and animate
+              the clone's opacity, rather than render it once and animate its color (as color animations don't support the native driver). */}
+              <Animated.View
                 style={[
                   markerStyles,
-                  { // Magic values to center the step marker in its press container
-                    transform: [{ translateX: 8 }, { translateY: 7 }],
+                  this.props.selectedStepMarkerStyle,
+                  { // Magic value to render the selected version directly on top of the unselected one
+                    transform: [{ translateX: -2 }],
+                    opacity: animatedOpacity,
                   },
                 ]}
-              >
-                {/* Clone of the step marker, but with 'selected' style applied. It's better to render the component twice and animate
-                the clone's opacity, rather than render it once and animate its color (as color animations don't support the native driver). */}
-                <Animated.View
-                  style={[
-                    markerStyles,
-                    this.props.selectedStepMarkerStyle,
-                    { // Magic value to render the selected version directly on top of the unselected one
-                      transform: [{ translateX: -2 }],
-                      opacity: animatedOpacity,
-                    },
-                  ]}
-                />
-              </View>
-            )}
+              />
+            </View>
+          )}
           {this.props.showStepLabels && (
             <Text
               style={textStyles}
@@ -780,7 +778,7 @@ export default class MultiSlider extends React.Component {
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    height: 50,
+    height: 42,
     justifyContent: 'center',
   },
   fullTrack: {
@@ -828,7 +826,7 @@ const styles = StyleSheet.create({
   labelContainer: {
     position: 'absolute',
     flexGrow: 1,
-    transform: [{ translateY: -25 }],
+    transform: [{ translateY: -23 }],
   },
   topMarkerContainer: {
     zIndex: 1,
