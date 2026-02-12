@@ -487,8 +487,15 @@ export default class MultiSlider extends React.Component {
         extrapolate: 'clamp',
       });
 
+      const stepLabel = step?.stepLabel ?? number;
+      const stepTestID = `slider-step-${number}`;
+      const stepA11yLabel = `${step?.prefix ?? ''}${stepLabel}${step?.suffix ?? ''}`;
+
       return (
-        <Pressable accessibilityRole="button"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={stepA11yLabel}
+          testID={stepTestID}
           key={number}
           onPress={() => {
             this.setState({ valueOne: number });
