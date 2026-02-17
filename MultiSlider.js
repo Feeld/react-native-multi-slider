@@ -2,7 +2,6 @@ import React from 'react';
 
 import {
   StyleSheet,
-  PanResponder,
   View,
   Text,
   Platform,
@@ -13,9 +12,60 @@ import {
   Easing,
 } from 'react-native';
 
+import {
+  Gesture,
+  GestureDetector,
+} from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
+
 import DefaultMarker from './DefaultMarker';
 import DefaultLabel from './DefaultLabel';
 import { createArray, valueToPosition, positionToValue } from './converters';
+
+/**
+ * GestureWrapper - Wraps children with RNGH pan gesture handling.
+ * This replaces PanResponder which has compatibility issues with React Native's
+ * New Architecture (Fabric).
+ */
+const GestureWrapper = ({ onStart, onMove, onEnd, children, style }) => {
+  const gesture = Gesture.Pan()
+    .onBegin(() => {
+      'worklet';
+      if (onStart) {
+        runOnJS(onStart)();
+      }
+    })
+    .onUpdate((event) => {
+      'worklet';
+      if (onMove) {
+        runOnJS(onMove)({ dx: event.translationX, dy: event.translationY });
+      }
+    })
+    .onEnd((event) => {
+      'worklet';
+      if (onEnd) {
+        runOnJS(onEnd)({ dx: event.translationX, dy: event.translationY, moveX: event.absoluteX });
+      }
+    })
+    .onFinalize((event) => {
+      'worklet';
+      // Handle gesture cancellation (state 3 = CANCELLED)
+      if (event.state === 3 && onEnd) {
+        runOnJS(onEnd)({ dx: event.translationX, dy: event.translationY, moveX: event.absoluteX });
+      }
+    })
+    .minDistance(0)
+    .activeOffsetX([-10, 10])
+    .activeOffsetY([-10, 10]);
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={style}>
+        {children}
+      </Animated.View>
+    </GestureDetector>
+  );
+};
 
 export default class MultiSlider extends React.Component {
   static defaultProps = {
@@ -120,55 +170,17 @@ export default class MultiSlider extends React.Component {
       animation: new Animated.Value(initialValues[0]),
     };
 
-    this.subscribePanResponder();
+    // Store initial positions for gesture tracking
+    // RNGH provides translation relative to gesture start, so we capture
+    // the starting position when gesture begins
+    this._gestureStartPastOne = initialValues[0];
+    this._gestureStartPastTwo = initialValues[1];
   }
-
-  subscribePanResponder = () => {
-    var customPanResponder = (start, move, end) => {
-      return PanResponder.create({
-        onStartShouldSetPanResponder: (evt, gestureState) => true,
-        onStartShouldSetPanResponderCapture: (evt, gestureState) => true,
-        onMoveShouldSetPanResponder: (evt, gestureState) => true,
-        onMoveShouldSetPanResponderCapture: (evt, gestureState) => true,
-        onPanResponderGrant: (evt, gestureState) => start(),
-        onPanResponderMove: (evt, gestureState) => move(gestureState),
-        onPanResponderTerminationRequest: (evt, gestureState) => false,
-        onPanResponderRelease: (evt, gestureState) => end(gestureState),
-        onPanResponderTerminate: (evt, gestureState) => end(gestureState),
-        onShouldBlockNativeResponder: (evt, gestureState) => true,
-      });
-    };
-
-    this._panResponderBetween = customPanResponder(
-      gestureState => {
-        this.startOne(gestureState);
-        this.startTwo(gestureState);
-      },
-      gestureState => {
-        this.moveOne(gestureState);
-        this.moveTwo(gestureState);
-      },
-      gestureState => {
-        this.endOne(gestureState);
-        this.endTwo(gestureState);
-      },
-    );
-
-    this._panResponderOne = customPanResponder(
-      this.startOne,
-      this.moveOne,
-      this.endOne,
-    );
-    this._panResponderTwo = customPanResponder(
-      this.startTwo,
-      this.moveTwo,
-      this.endTwo,
-    );
-  };
 
   startOne = () => {
     if (this.props.enabledOne) {
       this.props.onValuesChangeStart();
+      this._gestureStartPastOne = this.state.pastOne;
       this.setState({
         onePressed: !this.state.onePressed,
       });
@@ -178,6 +190,7 @@ export default class MultiSlider extends React.Component {
   startTwo = () => {
     if (this.props.enabledTwo) {
       this.props.onValuesChangeStart();
+      this._gestureStartPastTwo = this.state.pastTwo;
       this.setState({
         twoPressed: !this.state.twoPressed,
       });
@@ -198,8 +211,8 @@ export default class MultiSlider extends React.Component {
       : gestureState.dy;
 
     const unconfined = I18nManager.isRTL
-      ? this.state.pastOne - accumDistance
-      : accumDistance + this.state.pastOne;
+      ? this._gestureStartPastOne - accumDistance
+      : accumDistance + this._gestureStartPastOne;
 
     var bottom = this.props.markerSize / 2;
 
@@ -278,8 +291,8 @@ export default class MultiSlider extends React.Component {
       : gestureState.dy;
 
     const unconfined = I18nManager.isRTL
-      ? this.state.pastTwo - accumDistance
-      : accumDistance + this.state.pastTwo;
+      ? this._gestureStartPastTwo - accumDistance
+      : accumDistance + this._gestureStartPastTwo;
     var bottom =
       this.state.positionOne +
       (this.props.allowOverlap
@@ -633,15 +646,35 @@ export default class MultiSlider extends React.Component {
             }}
           >
             {/* SELECTED TRACK */}
-            <Animated.View
-              style={[
-                styles.track,
-                this.props.trackStyle,
-                selectedTrackStyle,
-   
-              ]}
-              {...(twoMarkers ? this._panResponderBetween.panHandlers : {})}
-            />
+            {twoMarkers ? (
+              <GestureWrapper
+                onStart={() => {
+                  this.startOne();
+                  this.startTwo();
+                }}
+                onMove={(gestureState) => {
+                  this.moveOne(gestureState);
+                  this.moveTwo(gestureState);
+                }}
+                onEnd={(gestureState) => {
+                  this.endOne(gestureState);
+                  this.endTwo(gestureState);
+                }}
+                style={[
+                  styles.track,
+                  this.props.trackStyle,
+                  selectedTrackStyle,
+                ]}
+              />
+            ) : (
+              <Animated.View
+                style={[
+                  styles.track,
+                  this.props.trackStyle,
+                  selectedTrackStyle,
+                ]}
+              />
+            )}
           </View>
 
           {/* BACKGROUND TRACK */}
@@ -681,10 +714,11 @@ export default class MultiSlider extends React.Component {
                 />
               </View>
             )}
-            <View
+            <GestureWrapper
+              onStart={this.startOne}
+              onMove={this.moveOne}
+              onEnd={this.endOne}
               style={[styles.touch, touchStyle]}
-              ref={component => (this._markerOne = component)}
-              {...this._panResponderOne.panHandlers}
             >
               {isMarkersSeparated === false ? (
                 <Marker
@@ -713,7 +747,7 @@ export default class MultiSlider extends React.Component {
                   valueSuffix={this.props.valueSuffix}
                 />
               )}
-            </View>
+            </GestureWrapper>
           </Animated.View>
 
           {/* 2ND MARKER (END) */}
@@ -725,10 +759,11 @@ export default class MultiSlider extends React.Component {
                 this.props.markerContainerStyle,
               ]}
             >
-              <View
+              <GestureWrapper
+                onStart={this.startTwo}
+                onMove={this.moveTwo}
+                onEnd={this.endTwo}
                 style={[styles.touch, touchStyle]}
-                ref={component => (this._markerTwo = component)}
-                {...this._panResponderTwo.panHandlers}
               >
                 {isMarkersSeparated === false ? (
                   <Marker
@@ -757,7 +792,7 @@ export default class MultiSlider extends React.Component {
                     valueSuffix={this.props.valueSuffix}
                   />
                 )}
-              </View>
+              </GestureWrapper>
             </View>
           )}
         </View>
