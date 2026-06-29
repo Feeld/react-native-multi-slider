@@ -5,7 +5,7 @@ class DefaultMarker extends React.Component {
   render() {
     return (
       <TouchableHighlight
-        accesssible
+        accessible
         accessibilityLabel={this.props.accessibilityLabel}
         accessibilityHint={this.props.accessibilityHint}
       >
